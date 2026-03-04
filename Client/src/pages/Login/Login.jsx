@@ -71,11 +71,11 @@ const Login = () => {
             {/* Hero & Login Section */}
             <div className="flex flex-1 flex-col lg:flex-row overflow-hidden">
                 {/* Hero Side */}
-                <div className="relative flex min-h-[500px] w-full items-center justify-center overflow-hidden bg-[#fdfdeb] p-6 lg:w-[60%] lg:min-h-[540px]">
+                <div className="relative flex min-h-[500px] w-full items-center justify-center overflow-hidden bg-white p-6 lg:w-[60%] lg:min-h-[540px]">
                     {/* Animated Background Blobs */}
-                    <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-                    <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob-reverse"></div>
-                    <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+                    <div className="absolute top-0 -left-4 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+                    <div className="absolute top-0 -right-4 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob-reverse"></div>
+                    <div className="absolute -bottom-8 left-20 w-72 h-72 bg-white rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
 
                     {/* Decorative Grid Overlay */}
                     <div className="absolute inset-0 bg-grid-black opacity-[0.02]"></div>
