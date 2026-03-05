@@ -177,7 +177,12 @@ const Lost = () => {
     };
 
     const filteredItems = items.filter(item => {
-        const matchesSearch = item.itemName.toLowerCase().includes(searchQuery.toLowerCase());
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+            (item.itemName?.toLowerCase().includes(query)) ||
+            (item.location?.toLowerCase().includes(query)) ||
+            (item.description?.toLowerCase().includes(query));
+
         const isLost = item.status === 'lost';
 
         // Define isOwn by comparing item.user._id (populated) with user.id or user._id from context
@@ -350,17 +355,17 @@ const Lost = () => {
                 <div className="flex flex-col items-center gap-8 mb-16">
                     <div className="relative w-full max-w-xl group">
                         <div className="absolute inset-y-0 left-5 flex items-center text-gray-400 transition-colors group-focus-within:text-black">
-                            <Menu size={20} />
+                            <Search size={20} />
                         </div>
                         <input
                             type="text"
-                            placeholder="Search item name..."
+                            placeholder="Search by name, location, or description..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full rounded-3xl border border-gray-100 bg-white py-5 pl-14 pr-12 text-sm font-semibold shadow-xl shadow-black/5 outline-none transition-all duration-300 focus:ring-8 focus:ring-black/5"
                         />
                         <div className="absolute inset-y-0 right-5 flex items-center text-gray-400">
-                            <Search size={20} />
+                            <Menu size={20} />
                         </div>
                     </div>
 
