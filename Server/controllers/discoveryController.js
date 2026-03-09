@@ -19,13 +19,38 @@ const loadModel = async () => {
 // Helper: Get Image Embedding
 const getEmbedding = async (imageUrl) => {
     const image = await loadImage(imageUrl);
-    const canvas = createCanvas(image.width, image.height);
+
+    // Resize to 224x224 (MobileNet expected input size)
+    const SIZE = 224;
+    const canvas = createCanvas(SIZE, SIZE);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0);
+    ctx.drawImage(image, 0, 0, SIZE, SIZE);
+
+    // Get raw pixel data (Uint8ClampedArray: RGBA)
+    const imageData = ctx.getImageData(0, 0, SIZE, SIZE);
+    const { data } = imageData;
+
+    // Convert RGBA to RGB Float32 and create a tf.tensor3d
+    const rgbData = new Float32Array(SIZE * SIZE * 3);
+    for (let i = 0; i < SIZE * SIZE; i++) {
+        rgbData[i * 3] = data[i * 4] / 255; // R
+        rgbData[i * 3 + 1] = data[i * 4 + 1] / 255; // G
+        rgbData[i * 3 + 2] = data[i * 4 + 2] / 255; // B
+    }
+    const imgTensor = tf.tensor3d(rgbData, [SIZE, SIZE, 3]);
 
     const model = await loadModel();
-    const activation = model.infer(canvas, true);
-    return activation.dataSync();
+    // model.infer expects a 4D tensor [batch, height, width, channels]
+    const batched = imgTensor.expandDims(0);
+    const activation = model.infer(batched, true);
+    const embedding = activation.dataSync();
+
+    // Clean up tensors to avoid memory leaks
+    imgTensor.dispose();
+    batched.dispose();
+    activation.dispose();
+
+    return embedding;
 };
 
 // Helper: Cosine Similarity
