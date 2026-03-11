@@ -52,3 +52,25 @@ exports.getMyLostItems = async (req, res) => {
         res.status(500).json({ message: 'Server error while fetching your items' });
     }
 };
+
+exports.deleteLostItem = async (req, res) => {
+    try {
+        const item = await LostItem.findById(req.params.id);
+
+        if (!item) {
+            return res.status(404).json({ message: 'Item not found' });
+        }
+
+        // Check user
+        if (item.user.toString() !== req.user) {
+            return res.status(401).json({ message: 'User not authorized' });
+        }
+
+        await item.deleteOne();
+
+        res.json({ message: 'Item removed' });
+    } catch (err) {
+        console.error('Error deleting lost item:', err);
+        res.status(500).json({ message: 'Server error while deleting item' });
+    }
+};

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Menu, User, Calendar, MapPin, Info, Phone, Mail, ChevronLeft, ChevronRight, X, Upload, MessageSquare, Package } from 'lucide-react';
+import { Search, Menu, User, Calendar, MapPin, Info, Phone, Mail, ChevronLeft, ChevronRight, X, Upload, MessageSquare, Package, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AppContext';
 
@@ -176,6 +176,68 @@ const Lost = () => {
         }
     };
 
+    const handleDelete = async (itemId) => {
+        const result = await Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#000',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, delete it!',
+            background: '#fff',
+            customClass: {
+                popup: 'rounded-[30px]',
+                confirmButton: 'rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest',
+                cancelButton: 'rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest'
+            }
+        });
+
+        if (result.isConfirmed) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`http://localhost:5000/api/lost/${itemId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: 'Your report has been deleted.',
+                        confirmButtonColor: '#000',
+                        customClass: {
+                            popup: 'rounded-[30px]',
+                            confirmButton: 'rounded-xl px-6 py-3 text-xs font-black uppercase tracking-widest'
+                        }
+                    });
+                    // Update local state
+                    setItems(prev => prev.filter(item => item._id !== itemId));
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'Failed to delete the report.',
+                        confirmButtonColor: '#000'
+                    });
+                }
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to connect to the server.',
+                    confirmButtonColor: '#000'
+                });
+            }
+        }
+    };
+
     const filteredItems = items.filter(item => {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
@@ -326,17 +388,28 @@ const Lost = () => {
                 </div>
 
                 {/* Card Footer */}
-                <div className="p-6 pt-0 bg-white group-hover:bg-gray-50/50 transition-colors duration-500">
-                    <button
-                        onClick={() => !isOwn && openContactModal(item)}
-                        disabled={isOwn}
-                        className={`w-full rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest transition-all duration-300 ${isOwn
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-black text-white shadow-xl hover:bg-gray-900 active:scale-[0.98]'
-                            }`}
-                    >
-                        {isOwn ? 'Watching Item' : 'Contact Owner'}
-                    </button>
+                <div className="p-6 pt-0 bg-white group-hover:bg-gray-50/50 transition-colors duration-500 flex gap-3">
+                    {isOwn ? (
+                        <>
+                            <div className="flex-1 rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest bg-gray-100 text-gray-400 cursor-not-allowed text-center border border-gray-200">
+                                Watching Item
+                            </div>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(item._id); }}
+                                className="flex h-[46px] w-[46px] items-center justify-center rounded-2xl bg-red-50 text-red-500 transition-all duration-300 hover:bg-red-500 hover:text-white hover:rotate-12 hover:scale-110 shadow-sm border border-red-100"
+                                title="Delete Report"
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={() => openContactModal(item)}
+                            className="w-full rounded-2xl bg-black py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-xl transition-all duration-300 hover:bg-gray-900 active:scale-[0.98]"
+                        >
+                            Contact Owner
+                        </button>
+                    )}
                 </div>
             </div>
         );

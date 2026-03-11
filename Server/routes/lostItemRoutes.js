@@ -14,4 +14,6 @@ router.get('/all', lostItemController.getLostItems);
 
 router.get('/my-items', auth, lostItemController.getMyLostItems);
 
+router.delete('/:id', auth, lostItemController.deleteLostItem);
+
 module.exports = router;
