@@ -1,69 +1,88 @@
 const DiscoveryReport = require('../models/DiscoveryReport');
 const LostItem = require('../models/LostItem');
-const User = require('../models/User'); // Fixed: Added User model import
+const User = require('../models/User');
 const nodemailer = require('nodemailer');
 const tf = require('@tensorflow/tfjs');
 const mobilenet = require('@tensorflow-models/mobilenet');
+const https = require('https');
+const http = require('http');
 const { createCanvas, loadImage } = require('canvas');
-const axios = require('axios');
 
-// Load MobileNet model once
-let net;
+// ─────────────────────────────────────────────────────────────────────────────
+// Image Similarity: AI Object Similarity (MobileNet)
+// This uses MobileNet embeddings (feature vectors) to compare images.
+// ─────────────────────────────────────────────────────────────────────────────
+
+let model;
+
+/**
+ * Loads the MobileNet model.
+ */
 const loadModel = async () => {
-    if (!net) {
-        net = await mobilenet.load();
+    try {
+        if (!model) {
+            model = await mobilenet.load();
+            console.log('✅ MobileNet Model Loaded Successfully');
+        }
+    } catch (err) {
+        console.error('❌ Failed to load MobileNet model:', err);
     }
-    return net;
 };
 
-// Helper: Get Image Embedding
-const getEmbedding = async (imageUrl) => {
-    const image = await loadImage(imageUrl);
+// Initialize model on startup
+loadModel();
 
-    // Resize to 224x224 (MobileNet expected input size)
-    const SIZE = 224;
-    const canvas = createCanvas(SIZE, SIZE);
+/**
+ * Downloads an image from a URL and returns a Buffer.
+ */
+const downloadImageBuffer = (url) => {
+    return new Promise((resolve, reject) => {
+        const client = url.startsWith('https') ? https : http;
+        const agent = new https.Agent({ rejectUnauthorized: false });
+        client.get(url, { agent }, (res) => {
+            const chunks = [];
+            res.on('data', chunk => chunks.push(chunk));
+            res.on('end', () => resolve(Buffer.concat(chunks)));
+            res.on('error', reject);
+        }).on('error', reject);
+    });
+};
+
+/**
+ * Extracts embeddings (feature vector) from an image buffer using MobileNet.
+ */
+const extractEmbeddings = async (imageBuffer) => {
+    const img = await loadImage(imageBuffer);
+    const canvas = createCanvas(224, 224);
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0, SIZE, SIZE);
+    ctx.drawImage(img, 0, 0, 224, 224);
 
-    // Get raw pixel data (Uint8ClampedArray: RGBA)
-    const imageData = ctx.getImageData(0, 0, SIZE, SIZE);
-    const { data } = imageData;
-
-    // Convert RGBA to RGB Float32 and create a tf.tensor3d
-    const rgbData = new Float32Array(SIZE * SIZE * 3);
-    for (let i = 0; i < SIZE * SIZE; i++) {
-        rgbData[i * 3] = data[i * 4] / 255; // R
-        rgbData[i * 3 + 1] = data[i * 4 + 1] / 255; // G
-        rgbData[i * 3 + 2] = data[i * 4 + 2] / 255; // B
-    }
-    const imgTensor = tf.tensor3d(rgbData, [SIZE, SIZE, 3]);
-
-    const model = await loadModel();
-    // model.infer expects a 4D tensor [batch, height, width, channels]
-    const batched = imgTensor.expandDims(0);
-    const activation = model.infer(batched, true);
-    const embedding = activation.dataSync();
-
-    // Clean up tensors to avoid memory leaks
-    imgTensor.dispose();
-    batched.dispose();
-    activation.dispose();
-
-    return embedding;
+    return tf.tidy(() => {
+        const tensor = tf.browser.fromPixels(canvas);
+        // Use model.infer to get the internal activation (embedding)
+        const embedding = model.infer(tensor, true);
+        return embedding.flatten();
+    });
 };
 
-// Helper: Cosine Similarity
-const cosineSimilarity = (vecA, vecB) => {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] ** 2;
-        normB += vecB[i] ** 2;
-    }
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+/**
+ * Calculates Cosine Similarity between two embedding tensors.
+ */
+const calculateCosineSimilarity = (tensorA, tensorB) => {
+    return tf.tidy(() => {
+        // Ensure tensors are 1D vectors
+        const vecA = tensorA.flatten();
+        const vecB = tensorB.flatten();
+        
+        const normA = tf.norm(vecA);
+        const normB = tf.norm(vecB);
+        
+        // Use tf.dot for vector dot product (more robust than matMul for 1D)
+        const dotProduct = tf.dot(vecA, vecB);
+        
+        const similarity = dotProduct.div(normA.mul(normB));
+        return similarity.dataSync()[0];
+    });
 };
 
 exports.submitDiscoveryReport = async (req, res) => {
@@ -92,43 +111,96 @@ exports.submitDiscoveryReport = async (req, res) => {
             return res.status(400).json({ message: 'At least one photo is required for verification' });
         }
 
-        // Similarity Check (Owner Pics vs Reporter Pics)
+        // ── AI Object Similarity Check ──────────────────────────────────
+        // Rule: EVERY reporter photo must match AT LEAST ONE owner photo.
+        //       Threshold for a single match: 85% (0.85)
+        // ──────────────────────────────────────────────────────────────────────
+        const SIMILARITY_THRESHOLD = 0.85;
+
         const ownerPhotos = lostItem.images;
         const reporterPhotos = discoveryPhotoUrls;
 
-        let totalSimilarityScore = 0;
+        let totalBestMatchScore = 0;
         let similarityScore = 0;
+
         try {
-            // 1. Get embeddings for all owner photos
-            const ownerEmbeddings = await Promise.all(ownerPhotos.map(url => getEmbedding(url)));
+            // Ensure model is loaded
+            if (!model) await loadModel();
 
-            // 2. Iterate through reporter photos and check similarity
-            for (const reporterPic of reporterPhotos) {
-                const reporterEmbedding = await getEmbedding(reporterPic);
-                let maxSimilarityForThisPhoto = 0;
+            // 1. Extract embeddings for all owner photos
+            const ownerEmbeddings = [];
+            for (let i = 0; i < ownerPhotos.length; i++) {
+                const url = ownerPhotos[i];
+                const buffer = await downloadImageBuffer(url);
+                const emb = await extractEmbeddings(buffer);
+                ownerEmbeddings.push({ embedding: emb, url: url });
+            }
 
-                for (const ownerEmbedding of ownerEmbeddings) {
-                    const similarity = cosineSimilarity(reporterEmbedding, ownerEmbedding);
-                    if (similarity > maxSimilarityForThisPhoto) {
-                        maxSimilarityForThisPhoto = similarity;
+            // 2. Each reporter photo must find at least one match in ownerEmbeddings
+            for (let ri = 0; ri < reporterPhotos.length; ri++) {
+                const reporterUrl = reporterPhotos[ri];
+                const reporterBuffer = await downloadImageBuffer(reporterUrl);
+                const reporterEmb = await extractEmbeddings(reporterBuffer);
+
+                let hasAtLeastOneMatch = false;
+                let bestSimilarityForThisPhoto = 0;
+                let bestMatchOwnerIndex = -1;
+
+                console.log(`\n[Checking Reporter Photo ${ri + 1}/${reporterPhotos.length}]`);
+                console.log(`URL: ${reporterUrl}`);
+
+                for (let oi = 0; oi < ownerEmbeddings.length; oi++) {
+                    const ownerEntry = ownerEmbeddings[oi];
+                    const sim = calculateCosineSimilarity(reporterEmb, ownerEntry.embedding);
+                    
+                    if (sim > bestSimilarityForThisPhoto) {
+                        bestSimilarityForThisPhoto = sim;
+                        bestMatchOwnerIndex = oi;
+                    }
+                    if (sim >= SIMILARITY_THRESHOLD) {
+                        hasAtLeastOneMatch = true;
                     }
                 }
 
-                console.log(`Max Similarity for photo ${reporterPic}: ${maxSimilarityForThisPhoto}`);
-
-                // If any reporter photo doesn't match ANY owner photo, fail.
-                if (maxSimilarityForThisPhoto < 0.85) {
-                    return res.status(400).json({ message: 'Photo is not similar enough.' });
+                // Detailed console report as requested
+                console.log(`-----------------------------------------`);
+                console.log(`Reporter Image: Photo ${ri + 1}`);
+                if (bestMatchOwnerIndex !== -1) {
+                    console.log(`Matched with: Owner Photo ${bestMatchOwnerIndex + 1}`);
+                    console.log(`Similarity: ${(bestSimilarityForThisPhoto * 100).toFixed(2)}%`);
                 }
-                totalSimilarityScore += maxSimilarityForThisPhoto;
+                console.log(`Status: ${hasAtLeastOneMatch ? '✅ PASSED' : '❌ FAILED'} (Threshold: ${SIMILARITY_THRESHOLD * 100}%)`);
+                console.log(`-----------------------------------------`);
+
+                // Add best match for this reporter photo to total (for overall average)
+                totalBestMatchScore += bestSimilarityForThisPhoto;
+
+                // Dispose of reporter embedding tensor
+                reporterEmb.dispose();
+
+                if (!hasAtLeastOneMatch) {
+                    console.log(`❌ FAIL: Reporter photo ${ri + 1} did not match any owner photos above 85%.`);
+                    
+                    // Dispose of owner embedding tensors before returning
+                    ownerEmbeddings.forEach(entry => entry.embedding.dispose());
+
+                    return res.status(400).json({
+                        message: `Verification failed. Your photo #${ri + 1} does not match any of the owner's original photos closely enough (min. 85%).`
+                    });
+                }
             }
 
-            // Calculate average similarity score for the report record
-            similarityScore = totalSimilarityScore / reporterPhotos.length;
-            console.log(`Final Average Similarity Score: ${similarityScore}`);
+            // Calculate final average similarity score for the whole report
+            similarityScore = totalBestMatchScore / reporterPhotos.length;
+
+            // Dispose of owner embedding tensors
+            ownerEmbeddings.forEach(entry => entry.embedding.dispose());
+
+            console.log(`\n[ALL PHOTOS VERIFIED SUCCESSFULLY]`);
+            console.log(`Overall Similarity Score for Report: ${(similarityScore * 100).toFixed(2)}%`);
         } catch (err) {
-            console.error('AI Similarity Error:', err);
-            return res.status(500).json({ message: 'Error during image verification' });
+            console.error('AI Image Comparison Error:', err);
+            return res.status(500).json({ message: 'Error during AI image verification' });
         }
 
         // Save Report
@@ -139,7 +211,7 @@ exports.submitDiscoveryReport = async (req, res) => {
             discoveryLocation,
             discoveryDesc,
             discoveryPhotos: discoveryPhotoUrls,
-            similarityScore: similarityScore * 100
+            similarityScore: similarityScore
         });
 
         await newReport.save();
@@ -154,7 +226,9 @@ exports.submitDiscoveryReport = async (req, res) => {
         }
 
         const transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'smtp.gmail.com',
+            port: 465,
+            secure: true, // SSL on port 465
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS
@@ -308,7 +382,9 @@ exports.updateReportStatus = async (req, res) => {
         // Send Email Notification to Reporter
         if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
             const transporter = nodemailer.createTransport({
-                service: 'gmail',
+                host: 'smtp.gmail.com',
+                port: 465,
+                secure: true,
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS
