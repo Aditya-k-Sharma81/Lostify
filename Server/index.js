@@ -13,7 +13,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: "https://lostify.vercel.app",
+    origin: ["https://lostify.vercel.app", "https://lostify-hazel.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
 }));
