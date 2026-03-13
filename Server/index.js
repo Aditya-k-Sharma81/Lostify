@@ -16,23 +16,35 @@ const app = express();
 // app.use(cors());
 
 const allowedOrigins = [
-    'https://lostify-git-main-adityasharmaas813-5253s-projects.vercel.app',
     'https://lostify-hazel.vercel.app',
+    'https://lostify.vercel.app',
+    /https:\/\/lostify-.*-adityasharma.*\.vercel\.app$/, // Allow all Vercel previews for this project
     'http://localhost:5173',
-    'http://localhost:3000',
-    'https://lostify.vercel.app'
+    'http://localhost:3000'
 ];
 
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        const isAllowed = allowedOrigins.some(allowed => {
+            if (allowed instanceof RegExp) {
+                return allowed.test(origin);
+            }
+            return allowed === origin;
+        });
+
+        if (isAllowed) {
             callback(null, true);
         } else {
+            console.warn('CORS blocked origin:', origin);
             callback(new Error('Not allowed by CORS'));
         }
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 }));
 
 app.use(express.json());
