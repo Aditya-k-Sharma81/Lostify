@@ -30,7 +30,8 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/auth/login', {
+            // Updated to point to local server for development
+            const response = await fetch('http://localhost:5000/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -54,6 +55,7 @@ const Login = () => {
                 throw new Error(data.message || "Invalid credentials.");
             }
         } catch (error) {
+            console.error('Login error:', error);
             Swal.fire({
                 title: "Oops!",
                 text: error.message,
