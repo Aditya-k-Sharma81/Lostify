@@ -12,41 +12,10 @@ dotenv.config();
 
 const app = express();
 
-/* ===============================
-   CORS CONFIGURATION
-================================= */
 
-const allowedOrigins = [
-    "https://lostify.vercel.app",
-    "https://lostify-hazel.vercel.app",
-    "https://lostify-git-main-adityasharmaas813-5253s-projects.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:3000"
-];
 
-app.use(cors({
-    origin: function (origin, callback) {
+app.use(cors());
 
-        // allow requests with no origin (mobile apps / curl)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        } else {
-            return callback(null, true);
-            // production me error throw kar sakte ho
-        }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true
-}));
-
-// Preflight request handle
-app.options("*", cors());
-
-/* ===============================
-   MIDDLEWARE
-================================= */
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -54,18 +23,14 @@ app.use(express.urlencoded({ extended: true }));
 // Static folder for uploads
 app.use('/uploads', express.static('uploads'));
 
-/* ===============================
-   ROUTES
-================================= */
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/lost', lostItemRoutes);
 app.use('/api/discovery', discoveryRoutes);
 
-/* ===============================
-   ROOT ROUTE (FOR TEST)
-================================= */
+
 
 app.get("/", (req, res) => {
     res.json({
@@ -73,9 +38,7 @@ app.get("/", (req, res) => {
     });
 });
 
-/* ===============================
-   404 HANDLER
-================================= */
+
 
 app.use((req, res) => {
     res.status(404).json({
@@ -84,9 +47,7 @@ app.use((req, res) => {
     });
 });
 
-/* ===============================
-   DATABASE CONNECTION
-================================= */
+
 
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -99,9 +60,6 @@ mongoose.connect(process.env.MONGO_URI, {
         console.log("MongoDB Connection Error:", err);
     });
 
-/* ===============================
-   SERVER
-================================= */
 
 const PORT = process.env.PORT || 5000;
 
