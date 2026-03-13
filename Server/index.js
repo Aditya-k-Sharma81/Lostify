@@ -12,10 +12,25 @@ dotenv.config();
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+    "https://lostify.vercel.app",
+    "https://lostify-hazel.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000"
+];
+
 app.use(cors({
-    origin: ["https://lostify.vercel.app", "https://lostify-hazel.vercel.app"],
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 
 app.use(express.json());
