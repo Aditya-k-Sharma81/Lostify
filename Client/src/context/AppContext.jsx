@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const fetchUserData = async (token) => {
             try {
-                const response = await fetch('http://localhost:5000/api/user/profile', {
+                const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/user/profile', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

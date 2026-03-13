@@ -21,7 +21,7 @@ const Found = () => {
         if (!token) return;
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:5000/api/discovery/accepted', {
+            const res = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/accepted', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

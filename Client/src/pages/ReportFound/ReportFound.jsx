@@ -35,7 +35,7 @@ const ReportFound = () => {
         if (!token) return;
         setLoading(true);
         try {
-            const res = await fetch('http://localhost:5000/api/discovery/my-lost-reports', {
+            const res = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/my-lost-reports', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -69,7 +69,7 @@ const ReportFound = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const res = await fetch(`http://localhost:5000/api/discovery/status/${id}`, {
+                    const res = await fetch(`https://lostify-backend-6nsq.onrender.com/api/discovery/status/${id}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
