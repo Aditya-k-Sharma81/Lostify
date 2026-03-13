@@ -73,13 +73,13 @@ const calculateCosineSimilarity = (tensorA, tensorB) => {
         // Ensure tensors are 1D vectors
         const vecA = tensorA.flatten();
         const vecB = tensorB.flatten();
-        
+
         const normA = tf.norm(vecA);
         const normB = tf.norm(vecB);
-        
+
         // Use tf.dot for vector dot product (more robust than matMul for 1D)
         const dotProduct = tf.dot(vecA, vecB);
-        
+
         const similarity = dotProduct.div(normA.mul(normB));
         return similarity.dataSync()[0];
     });
@@ -93,22 +93,22 @@ exports.submitDiscoveryReport = async (req, res) => {
         const reporterId = req.user;
 
         if (!lostItemId || !discoveryDate || !discoveryLocation || !discoveryDesc) {
-            return res.status(400).json({ message: 'Missing required fields' });
+            return res.json({ success: false, message: 'Missing required fields' });
         }
 
         const lostItem = await LostItem.findById(lostItemId).populate('user');
         if (!lostItem) {
-            return res.status(404).json({ message: 'Lost item not found' });
+            return res.json({ success: false, message: 'Lost item not found' });
         }
 
         const reporter = await User.findById(reporterId); // Fetch full reporter object for name
         if (!reporter) {
-            return res.status(404).json({ message: 'Reporter not found' });
+            return res.json({ success: false, message: 'Reporter not found' });
         }
 
         const discoveryPhotoUrls = req.files ? req.files.map(file => file.path) : [];
         if (discoveryPhotoUrls.length === 0) {
-            return res.status(400).json({ message: 'At least one photo is required for verification' });
+            return res.json({ success: false, message: 'At least one photo is required for verification' });
         }
 
         // ── AI Object Similarity Check ──────────────────────────────────
@@ -152,7 +152,7 @@ exports.submitDiscoveryReport = async (req, res) => {
                 for (let oi = 0; oi < ownerEmbeddings.length; oi++) {
                     const ownerEntry = ownerEmbeddings[oi];
                     const sim = calculateCosineSimilarity(reporterEmb, ownerEntry.embedding);
-                    
+
                     if (sim > bestSimilarityForThisPhoto) {
                         bestSimilarityForThisPhoto = sim;
                         bestMatchOwnerIndex = oi;
@@ -180,12 +180,13 @@ exports.submitDiscoveryReport = async (req, res) => {
 
                 if (!hasAtLeastOneMatch) {
                     console.log(`❌ FAIL: Reporter photo ${ri + 1} did not match any owner photos above 85%.`);
-                    
+
                     // Dispose of owner embedding tensors before returning
                     ownerEmbeddings.forEach(entry => entry.embedding.dispose());
 
-                    return res.status(400).json({
-                        message: `Verification failed. Your photo #${ri + 1} does not match any of the owner's original photos closely enough (min. 85%).`
+                    return res.json({
+                        success: false,
+                        message: 'Photo is not similar enough.'
                     });
                 }
             }
@@ -200,7 +201,7 @@ exports.submitDiscoveryReport = async (req, res) => {
             console.log(`Overall Similarity Score for Report: ${(similarityScore * 100).toFixed(2)}%`);
         } catch (err) {
             console.error('AI Image Comparison Error:', err);
-            return res.status(500).json({ message: 'Error during AI image verification' });
+            return res.json({ success: false, message: 'Error during AI image verification' });
         }
 
         // Save Report
@@ -219,7 +220,8 @@ exports.submitDiscoveryReport = async (req, res) => {
         // Send Email to Owner
         if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
             console.warn('Skipping email notification: EMAIL_USER or EMAIL_PASS not set in .env');
-            return res.status(201).json({
+            return res.json({
+                success: true,
                 message: 'Report submitted successfully. (Email notification skipped - credentials missing)',
                 report: newReport
             });
@@ -304,13 +306,15 @@ exports.submitDiscoveryReport = async (req, res) => {
                 });
             });
 
-            res.status(201).json({
+            res.json({
+                success: true,
                 message: 'Report submitted successfully and the owner has been notified via email.',
                 report: newReport
             });
         } catch (emailError) {
             // If email fails, we still have the report saved in DB
-            res.status(201).json({
+            res.json({
+                success: true,
                 message: 'Report submitted successfully, but the email notification failed. Please check your SMTP settings.',
                 report: newReport,
                 emailError: emailError.message
@@ -320,7 +324,7 @@ exports.submitDiscoveryReport = async (req, res) => {
 
     } catch (err) {
         console.error('Discovery Submit Error:', err);
-        res.status(500).json({ message: 'Server error while submitting discovery report' });
+        res.json({ success: false, message: 'Server error while submitting discovery report' });
     }
 };
 
@@ -338,11 +342,10 @@ exports.getReportsForMyLostItems = async (req, res) => {
                 select: 'name email phone profilePic'
             })
             .sort({ createdAt: -1 });
-
-        res.json(reports);
+        res.json({ success: true, reports });
     } catch (err) {
         console.error('Error fetching reports for my items:', err);
-        res.status(500).json({ message: 'Server error while fetching claims' });
+        res.json({ success: false, message: 'Server error while fetching claims' });
     }
 };
 
@@ -352,7 +355,7 @@ exports.updateReportStatus = async (req, res) => {
         const { status } = req.body;
 
         if (!['accepted', 'rejected'].includes(status)) {
-            return res.status(400).json({ message: 'Invalid status' });
+            return res.json({ success: false, message: 'Invalid status' });
         }
 
         const report = await DiscoveryReport.findById(id)
@@ -363,12 +366,12 @@ exports.updateReportStatus = async (req, res) => {
             .populate('reporter', 'name email');
 
         if (!report) {
-            return res.status(404).json({ message: 'Report not found' });
+            return res.json({ success: false, message: 'Report not found' });
         }
 
         // Verify that the user updating the status is the owner of the lost item
         if (report.lostItem.user._id.toString() !== req.user) {
-            return res.status(403).json({ message: 'Not authorized to update this report' });
+            return res.json({ success: false, message: 'Not authorized to update this report' });
         }
 
         report.status = status;
@@ -429,10 +432,10 @@ exports.updateReportStatus = async (req, res) => {
             transporter.sendMail(mailOptions).catch(err => console.error('Reporter Email Error:', err));
         }
 
-        res.json({ message: `Report ${status} successfully and reporter notified.`, report });
+        res.json({ success: true, message: `Report ${status} successfully and reporter notified.`, report });
     } catch (err) {
         console.error('Error updating report status:', err);
-        res.status(500).json({ message: 'Server error while updating status' });
+        res.json({ success: false, message: 'Server error while updating status' });
     }
 };
 
@@ -455,11 +458,9 @@ exports.getAcceptedReports = async (req, res) => {
             })
             .populate('reporter', 'name email phone profilePic')
             .sort({ updatedAt: -1 });
-
-        res.json(reports);
+        res.json({ success: true, reports });
     } catch (err) {
         console.error('Error fetching accepted reports:', err);
-        res.status(500).json({ message: 'Server error while fetching accepted reports' });
+        res.json({ success: false, message: 'Server error while fetching accepted reports' });
     }
 };
-

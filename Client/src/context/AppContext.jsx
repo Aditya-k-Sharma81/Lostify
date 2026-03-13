@@ -16,9 +16,9 @@ export const AuthProvider = ({ children }) => {
                         'Authorization': `Bearer ${token}`
                     }
                 });
-                if (response.ok) {
-                    const latestUserData = await response.json();
-                    setUser(latestUserData);
+                const data = await response.json();
+                if (data.success) {
+                    setUser(data.user);
                 }
             } catch (error) {
                 console.error("Failed to sync user data:", error);

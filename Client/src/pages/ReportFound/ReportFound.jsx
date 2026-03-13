@@ -39,8 +39,8 @@ const ReportFound = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
-            if (res.ok) {
-                setClaims(data);
+            if (data.success) {
+                setClaims(data.reports);
             }
         } catch (error) {
             console.error("Error fetching claims:", error);
@@ -78,7 +78,8 @@ const ReportFound = () => {
                         body: JSON.stringify({ status })
                     });
 
-                    if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
                         setClaims(prev => prev.map(c => c._id === id ? { ...c, status } : c));
                         setSelectedClaim(prev => prev?._id === id ? { ...prev, status } : prev);
 
@@ -93,7 +94,6 @@ const ReportFound = () => {
                             }
                         });
                     } else {
-                        const data = await res.json();
                         Swal.fire("Error", data.message || "Failed to update status", "error");
                     }
                 } catch (error) {

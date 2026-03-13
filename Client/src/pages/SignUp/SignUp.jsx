@@ -40,7 +40,7 @@ const SignUp = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (data.success) {
                 Swal.fire({
                     title: "Success!",
                     text: data.message || "User registered successfully. Please login to continue.",
@@ -50,7 +50,6 @@ const SignUp = () => {
                     navigate('/login');
                 });
             } else {
-
                 throw new Error(data.message || "Something went wrong.");
             }
         } catch (error) {

@@ -40,13 +40,13 @@ const ReportLost = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const itemsData = await itemsRes.json();
-            if (itemsRes.ok) setMyItems(itemsData);
+            if (itemsData.success) setMyItems(itemsData.items);
 
             const reportsRes = await fetch('http://localhost:5000/api/discovery/my-lost-reports', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const reportsData = await reportsRes.json();
-            if (reportsRes.ok) setDiscoveryReports(reportsData);
+            if (reportsData.success) setDiscoveryReports(reportsData.reports);
         } catch (error) {
             console.error("Error fetching user data:", error);
         } finally {
@@ -153,7 +153,7 @@ const ReportLost = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (data.success) {
                 Swal.fire({
                     title: "Success!",
                     text: data.message || "Your lost item has been reported successfully.",

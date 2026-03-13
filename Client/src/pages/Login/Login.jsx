@@ -40,7 +40,7 @@ const Login = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (data.success) {
                 Swal.fire({
                     title: "Success!",
                     text: data.message || "Logged in successfully!",

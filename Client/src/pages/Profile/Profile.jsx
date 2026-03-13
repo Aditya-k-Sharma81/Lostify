@@ -72,7 +72,7 @@ const Profile = () => {
                 throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
             }
 
-            if (response.ok) {
+            if (data.success) {
                 // Update local storage and context
                 login(token, data.user);
 

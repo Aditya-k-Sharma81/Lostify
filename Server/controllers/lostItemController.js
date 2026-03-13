@@ -5,7 +5,7 @@ exports.reportLostItem = async (req, res) => {
         const { itemName, location, dateLost, description, name, phone } = req.body;
 
         if (!itemName || !location || !dateLost) {
-            return res.status(400).json({ message: 'Item name, location, and date are required' });
+            return res.json({ success: false, message: 'Item name, location, and date are required' });
         }
 
         const imageUrls = req.files ? req.files.map(file => file.path) : [];
@@ -23,33 +23,34 @@ exports.reportLostItem = async (req, res) => {
 
         await newLostItem.save();
 
-        res.status(201).json({
+        res.json({
+            success: true,
             message: 'Lost item reported successfully',
             item: newLostItem
         });
     } catch (err) {
         console.error('Error reporting lost item:', err);
-        res.status(500).json({ message: 'Server error while reporting lost item' });
+        res.json({ success: false, message: 'Server error while reporting lost item' });
     }
 };
 
 exports.getLostItems = async (req, res) => {
     try {
         const items = await LostItem.find().sort({ createdAt: -1 }).populate('user', 'name profilePic email phone');
-        res.json(items);
+        res.json({ success: true, items });
     } catch (err) {
         console.error('Error fetching lost items:', err);
-        res.status(500).json({ message: 'Server error while fetching items' });
+        res.json({ success: false, message: 'Server error while fetching items' });
     }
 };
 
 exports.getMyLostItems = async (req, res) => {
     try {
         const items = await LostItem.find({ user: req.user }).sort({ createdAt: -1 });
-        res.json(items);
+        res.json({ success: true, items });
     } catch (err) {
         console.error('Error fetching my lost items:', err);
-        res.status(500).json({ message: 'Server error while fetching your items' });
+        res.json({ success: false, message: 'Server error while fetching your items' });
     }
 };
 
@@ -58,19 +59,19 @@ exports.deleteLostItem = async (req, res) => {
         const item = await LostItem.findById(req.params.id);
 
         if (!item) {
-            return res.status(404).json({ message: 'Item not found' });
+            return res.json({ success: false, message: 'Item not found' });
         }
 
         // Check user
         if (item.user.toString() !== req.user) {
-            return res.status(401).json({ message: 'User not authorized' });
+            return res.json({ success: false, message: 'User not authorized' });
         }
 
         await item.deleteOne();
 
-        res.json({ message: 'Item removed' });
+        res.json({ success: true, message: 'Item removed' });
     } catch (err) {
         console.error('Error deleting lost item:', err);
-        res.status(500).json({ message: 'Server error while deleting item' });
+        res.json({ success: false, message: 'Server error while deleting item' });
     }
 };

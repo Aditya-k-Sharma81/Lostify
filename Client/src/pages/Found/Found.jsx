@@ -27,9 +27,9 @@ const Found = () => {
                 }
             });
             const data = await res.json();
-            if (res.ok) {
+            if (data.success) {
                 // Map discovery reports to the format expected by the UI
-                const mappedItems = data.map(report => ({
+                const mappedItems = data.reports.map(report => ({
                     id: report._id,
                     ownerName: report.lostItem?.user?.name || "Owner",
                     finderName: report.reporter?.name || "Reporter",

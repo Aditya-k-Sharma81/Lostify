@@ -29,8 +29,8 @@ const Lost = () => {
                 const data = await response.json();
                 console.log('Fetched Lost Items:', data);
                 console.log('Current User Context:', user);
-                if (response.ok) {
-                    setItems(data);
+                if (data.success) {
+                    setItems(data.items);
                 } else {
                     console.error('Failed to fetch items:', data.message);
                 }
@@ -137,7 +137,7 @@ const Lost = () => {
 
             const data = await response.json();
 
-            if (response.ok) {
+            if (data.success) {
                 Swal.fire({
                     icon: 'success',
                     title: 'Report Sent!',
@@ -205,7 +205,7 @@ const Lost = () => {
 
                 const data = await response.json();
 
-                if (response.ok) {
+                if (data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Deleted!',
