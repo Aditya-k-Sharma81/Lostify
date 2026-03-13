@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AppContext';
 import heroPic from '../../assets/HeroPic.png';
 
 const SignUp = () => {
-    const { login } = useAuth();
+    const { login, backendUrl } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,7 +30,7 @@ const SignUp = () => {
         setLoading(true);
 
         try {
-            const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/auth/signup', {
+            const response = await fetch(`${backendUrl}/api/auth/signup`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AppContext';
 
 const Profile = () => {
-    const { isLoggedIn, user, login } = useAuth();
+    const { isLoggedIn, user, login, backendUrl } = useAuth();
     const token = localStorage.getItem('token');
 
     // Form state
@@ -53,7 +53,7 @@ const Profile = () => {
                 formData.append('profilePic', photo);
             }
 
-            const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/user/update', {
+            const response = await fetch(`${backendUrl}/api/user/update`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`

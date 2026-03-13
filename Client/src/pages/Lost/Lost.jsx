@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AppContext';
 
 const Lost = () => {
-    const { isLoggedIn, user } = useAuth();
+    const { isLoggedIn, user, backendUrl } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('community'); // 'community' or 'my'
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -25,7 +25,7 @@ const Lost = () => {
         const fetchItems = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/lost/all');
+                const response = await fetch(`${backendUrl}/api/lost/all`);
                 const data = await response.json();
                 console.log('Fetched Lost Items:', data);
                 console.log('Current User Context:', user);
@@ -42,7 +42,7 @@ const Lost = () => {
         };
 
         fetchItems();
-    }, []);
+    }, [backendUrl]);
 
     // Geolocation for Modal
     useEffect(() => {
@@ -127,7 +127,7 @@ const Lost = () => {
             });
 
             const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
-            const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/report', {
+            const response = await fetch(`${backendUrl}/api/discovery/report`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -196,7 +196,7 @@ const Lost = () => {
         if (result.isConfirmed) {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`https://lostify-backend-6nsq.onrender.com/api/lost/${itemId}`, {
+                const response = await fetch(`${backendUrl}/api/lost/${itemId}`, {
                     method: 'DELETE',
                     headers: {
                         'Authorization': `Bearer ${token}`

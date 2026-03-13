@@ -4,7 +4,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AppContext';
 
 const ReportLost = () => {
-    const { isLoggedIn, user } = useAuth();
+    const { isLoggedIn, user, backendUrl } = useAuth();
     const token = localStorage.getItem('token');
 
     // Form State
@@ -36,13 +36,13 @@ const ReportLost = () => {
         if (!token) return;
         setDataLoading(true);
         try {
-            const itemsRes = await fetch('https://lostify-backend-6nsq.onrender.com/api/lost/my-items', {
+            const itemsRes = await fetch(`${backendUrl}/api/lost/my-items`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const itemsData = await itemsRes.json();
             if (itemsData.success) setMyItems(itemsData.items);
 
-            const reportsRes = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/my-lost-reports', {
+            const reportsRes = await fetch(`${backendUrl}/api/discovery/my-lost-reports`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const reportsData = await reportsRes.json();
@@ -143,7 +143,7 @@ const ReportLost = () => {
                 formData.append('images', img.file);
             });
 
-            const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/lost/report', {
+            const response = await fetch(`${backendUrl}/api/lost/report`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`

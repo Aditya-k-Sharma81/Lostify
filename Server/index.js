@@ -15,8 +15,22 @@ const app = express();
 // Middleware
 // app.use(cors());
 
+const allowedOrigins = [
+    'https://lostify-git-main-adityasharmaas813-5253s-projects.vercel.app',
+    'https://lostify-hazel.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://lostify.vercel.app'
+];
+
 app.use(cors({
-    origin: 'https://lostify-git-main-adityasharmaas813-5253s-projects.vercel.app',
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));

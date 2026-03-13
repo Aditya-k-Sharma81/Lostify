@@ -8,10 +8,14 @@ export const AuthProvider = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
 
+    const backendUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000' 
+        : 'https://lostify-backend-6nsq.onrender.com';
+
     useEffect(() => {
         const fetchUserData = async (token) => {
             try {
-                const response = await fetch('https://lostify-backend-6nsq.onrender.com/api/user/profile', {
+                const response = await fetch(`${backendUrl}/api/user/profile`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -31,7 +35,7 @@ export const AuthProvider = ({ children }) => {
             setIsLoggedIn(true);
             fetchUserData(token);
         }
-    }, []);
+    }, [backendUrl]);
 
     const login = (token, userData) => {
         localStorage.setItem('token', token);
@@ -46,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AppContext.Provider value={{ isLoggedIn, user, login, logout }}>
+        <AppContext.Provider value={{ isLoggedIn, user, login, logout, backendUrl }}>
             {children}
         </AppContext.Provider>
     );

@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AppContext';
 import heroPic from '../../assets/HeroPic.png';
 
 const Login = () => {
-    const { login } = useAuth();
+    const { login, backendUrl } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -30,8 +30,7 @@ const Login = () => {
         setLoading(true);
 
         try {
-            // Updated to point to local server for development
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const response = await fetch(`${backendUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

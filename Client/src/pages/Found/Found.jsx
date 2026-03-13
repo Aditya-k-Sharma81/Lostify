@@ -3,7 +3,7 @@ import { Search, Menu, Calendar, MapPin, Info, Phone, ChevronLeft, ChevronRight,
 import { useAuth } from '../../context/AppContext';
 
 const Found = () => {
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, backendUrl } = useAuth();
     const token = localStorage.getItem('token');
     const [searchQuery, setSearchQuery] = useState('');
     const [foundItems, setFoundItems] = useState([]);
@@ -21,7 +21,7 @@ const Found = () => {
         if (!token) return;
         setLoading(true);
         try {
-            const res = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/accepted', {
+            const res = await fetch(`${backendUrl}/api/discovery/accepted`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

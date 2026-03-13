@@ -19,7 +19,7 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AppContext';
 
 const ReportFound = () => {
-    const { isLoggedIn } = useAuth();
+    const { isLoggedIn, backendUrl } = useAuth();
     const token = localStorage.getItem('token');
     const [selectedClaim, setSelectedClaim] = useState(null);
     const [claims, setClaims] = useState([]);
@@ -35,7 +35,7 @@ const ReportFound = () => {
         if (!token) return;
         setLoading(true);
         try {
-            const res = await fetch('https://lostify-backend-6nsq.onrender.com/api/discovery/my-lost-reports', {
+            const res = await fetch(`${backendUrl}/api/discovery/my-lost-reports`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -69,7 +69,7 @@ const ReportFound = () => {
         }).then(async (result) => {
             if (result.isConfirmed) {
                 try {
-                    const res = await fetch(`https://lostify-backend-6nsq.onrender.com/api/discovery/status/${id}`, {
+                    const res = await fetch(`${backendUrl}/api/discovery/status/${id}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json',
