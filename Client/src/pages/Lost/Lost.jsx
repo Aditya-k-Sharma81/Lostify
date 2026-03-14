@@ -27,15 +27,15 @@ const Lost = () => {
                 setLoading(true);
                 const response = await fetch(`${backendUrl}/api/lost/all`);
                 const data = await response.json();
-                console.log('Fetched Lost Items:', data);
-                console.log('Current User Context:', user);
+                // console.log('Fetched Lost Items:', data);
+                // console.log('Current User Context:', user);
                 if (data.success) {
                     setItems(data.items);
                 } else {
-                    console.error('Failed to fetch items:', data.message);
+                    // console.error('Failed to fetch items:', data.message);
                 }
             } catch (error) {
-                console.error('Error fetching items:', error);
+                // console.error('Error fetching items:', error);
             } finally {
                 setLoading(false);
             }
@@ -55,7 +55,9 @@ const Lost = () => {
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
                     const data = await response.json();
                     if (data && data.display_name) setDiscoveryLocation(data.display_name);
-                } catch (err) { console.error(err); }
+                } catch (err) {
+                    // console.error(err); 
+                }
             });
         }
     }, [isModalOpen, user]);
@@ -166,7 +168,7 @@ const Lost = () => {
                 }
             }
         } catch (error) {
-            console.error('Error submitting report:', error);
+            // console.error('Error submitting report:', error);
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -227,7 +229,7 @@ const Lost = () => {
                     });
                 }
             } catch (error) {
-                console.error('Error deleting item:', error);
+                // console.error('Error deleting item:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',

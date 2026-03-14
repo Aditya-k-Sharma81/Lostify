@@ -44,7 +44,7 @@ const Found = () => {
                 setFoundItems(mappedItems);
             }
         } catch (error) {
-            console.error("Error fetching accepted reports:", error);
+            // console.error("Error fetching accepted reports:", error);
         } finally {
             setLoading(false);
         }

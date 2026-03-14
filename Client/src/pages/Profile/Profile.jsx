@@ -62,13 +62,13 @@ const Profile = () => {
             });
 
             const responseText = await response.text();
-            console.log('Raw response:', responseText);
+            // console.log('Raw response:', responseText);
 
             let data;
             try {
                 data = JSON.parse(responseText);
             } catch (e) {
-                console.error('Failed to parse JSON:', e);
+                // console.error('Failed to parse JSON:', e);
                 throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`);
             }
 
@@ -93,7 +93,7 @@ const Profile = () => {
                 });
             }
         } catch (error) {
-            console.error('Update error:', error);
+            // console.error('Update error:', error);
             Swal.fire({
                 title: "Error!",
                 text: "Failed to connect to the server.",

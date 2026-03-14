@@ -8,8 +8,8 @@ export const AuthProvider = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
 
-    const backendUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:5000' 
+    const backendUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000'
         : 'https://lostify-backend-6nsq.onrender.com';
 
     useEffect(() => {
@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
                     setUser(data.user);
                 }
             } catch (error) {
-                console.error("Failed to sync user data:", error);
+                // console.error("Failed to sync user data:", error);
             }
         };
 

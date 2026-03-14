@@ -48,7 +48,7 @@ const ReportLost = () => {
             const reportsData = await reportsRes.json();
             if (reportsData.success) setDiscoveryReports(reportsData.reports);
         } catch (error) {
-            console.error("Error fetching user data:", error);
+            // console.error("Error fetching user data:", error);
         } finally {
             setDataLoading(false);
         }
@@ -68,7 +68,7 @@ const ReportLost = () => {
                         setLocation(data.display_name);
                     }
                 } catch (err) {
-                    console.error("Error fetching location name:", err);
+                    // console.error("Error fetching location name:", err);
                 }
             });
         }
@@ -170,7 +170,7 @@ const ReportLost = () => {
                 Swal.fire("Error", data.message || "Something went wrong.", "error");
             }
         } catch (error) {
-            console.error('Submission error:', error);
+            // console.error('Submission error:', error);
             Swal.fire("Error", "Failed to connect to the server.", "error");
         } finally {
             setLoading(false);

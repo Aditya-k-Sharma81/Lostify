@@ -54,7 +54,7 @@ const Login = () => {
                 throw new Error(data.message || "Invalid credentials.");
             }
         } catch (error) {
-            console.error('Login error:', error);
+            // console.error('Login error:', error);
             Swal.fire({
                 title: "Oops!",
                 text: error.message,

@@ -43,7 +43,7 @@ const ReportFound = () => {
                 setClaims(data.reports);
             }
         } catch (error) {
-            console.error("Error fetching claims:", error);
+            // console.error("Error fetching claims:", error);
         } finally {
             setLoading(false);
         }
@@ -97,7 +97,7 @@ const ReportFound = () => {
                         Swal.fire("Error", data.message || "Failed to update status", "error");
                     }
                 } catch (error) {
-                    console.error("Error updating status:", error);
+                    // console.error("Error updating status:", error);
                     Swal.fire("Error", "Network error", "error");
                 }
             }
