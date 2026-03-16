@@ -327,7 +327,48 @@ exports.updateReportStatus = async (req, res) => {
             await LostItem.findByIdAndUpdate(report.lostItem._id, { status: 'accepted' });
         }
 
-        res.json({ success: true, message: `Report ${status} successfully.`, report });
+        // Send Email Notification to Reporter via Resend
+        if (process.env.RESEND_API_KEY) {
+            try {
+                const ownerName = report.lostItem.user.name;
+                const itemName = report.lostItem.itemName;
+
+                await resend.emails.send({
+                    from: 'Lostify <onboarding@resend.dev>',
+                    to: report.reporter.email,
+                    subject: `Update on your Claim: ${status === 'accepted' ? 'Accepted' : 'Dismissed'}`,
+                    html: `
+                        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+                            <h2 style="color: ${status === 'accepted' ? '#10b981' : '#ef4444'}; text-align: center;">
+                                Claim ${status === 'accepted' ? 'Accepted!' : 'Dismissed'}
+                            </h2>
+                            <p>Hi <strong>${report.reporter.name}</strong>,</p>
+                            <p>The owner of the <strong>${itemName}</strong> (${ownerName}) has ${status === 'accepted' ? 'accepted' : 'dismissed'} your claim.</p>
+                            
+                            ${status === 'accepted' ? `
+                                <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #dcfce7; margin: 20px 0;">
+                                    <p style="margin: 0; color: #166534; font-weight: bold;">Congratulations! Your claim has been verified.</p>
+                                    <p style="margin-top: 10px; font-size: 14px; color: #166534;">The owner will reach out to you soon to coordinate the transfer. You can also view more details on your dashboard.</p>
+                                </div>
+                            ` : `
+                                <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fee2e2; margin: 20px 0;">
+                                    <p style="margin: 0; color: #991b1b; font-weight: bold;">The owner has dismissed this claim.</p>
+                                    <p style="margin-top: 10px; font-size: 14px; color: #991b1b;">It seems the details or photos provided did not match the owner's records. Thank you for your effort in helping the community.</p>
+                                </div>
+                            `}
+
+                            <div style="text-align: center; margin-top: 30px;">
+                                <a href="http://localhost:5173" style="display: inline-block; background: #000; color: #fff; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold;">Go to Dashboard</a>
+                            </div>
+                        </div>
+                    `
+                });
+            } catch (emailError) {
+                console.error('Reporter Email Error:', emailError);
+            }
+        }
+
+        res.json({ success: true, message: `Report ${status} successfully. Reporter notified via email.`, report });
     } catch (err) {
         console.error('Error updating report status:', err);
         res.json({ success: false, message: 'Server error while updating status' });
