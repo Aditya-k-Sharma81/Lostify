@@ -1,6 +1,3 @@
-const dotenv = require('dotenv');
-dotenv.config();
-
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,6 +7,8 @@ const userRoutes = require('./routes/userRoutes');
 const lostItemRoutes = require('./routes/lostItemRoutes');
 const discoveryRoutes = require('./routes/discoveryRoutes');
 
+const dotenv = require('dotenv');
+dotenv.config();
 
 const app = express();
 
@@ -40,11 +39,13 @@ app.use(cors({
             callback(null, true);
         } else {
             console.warn('CORS blocked origin:', origin);
-            callback(new Error('Not allowed by CORS'));
+            // Return false instead of an Error to allow the response to proceed 
+            // with headers (though origin will be blocked by browser)
+            callback(null, false);
         }
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
 }));
 
