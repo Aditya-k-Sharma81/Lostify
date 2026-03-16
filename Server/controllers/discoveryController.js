@@ -1,7 +1,10 @@
 const DiscoveryReport = require('../models/DiscoveryReport');
 const LostItem = require('../models/LostItem');
 const User = require('../models/User');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const tf = require('@tensorflow/tfjs');
 const mobilenet = require('@tensorflow-models/mobilenet');
 const https = require('https');
@@ -217,109 +220,51 @@ exports.submitDiscoveryReport = async (req, res) => {
 
         await newReport.save();
 
-        // Send Email to Owner
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            console.warn('Skipping email notification: EMAIL_USER or EMAIL_PASS not set in .env');
-            return res.json({
-                success: true,
-                message: 'Report submitted successfully. (Email notification skipped - credentials missing)',
-                report: newReport
-            });
-        }
+        // Send Email to Owner via Resend
+        if (process.env.RESEND_API_KEY) {
+            try {
+                await resend.emails.send({
+                    from: 'Lostify <onboarding@resend.dev>',
+                    to: lostItem.user.email,
+                    subject: `Discovery Report: Someone found your ${lostItem.itemName}!`,
+                    html: `
+                        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
+                            <h2 style="color: #333; text-align: center;">Good News!</h2>
+                            <p>Someone has reported finding an item that matches your <strong>${lostItem.itemName}</strong>.</p>
+                            
+                            <div style="background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #f0f0f0; margin: 20px 0;">
+                                <h3 style="margin-top: 0; color: #555;">Reporter Details:</h3>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li style="margin-bottom: 8px;"><strong>Name:</strong> ${reporter.name}</li>
+                                    <li style="margin-bottom: 8px;"><strong>Discovery Date:</strong> ${new Date(discoveryDate).toLocaleDateString()}</li>
+                                    <li style="margin-bottom: 8px;"><strong>Location:</strong> ${discoveryLocation}</li>
+                                </ul>
+                            </div>
 
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 465,
-            secure: true, // SSL on port 465
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
-            }
-        });
+                            <h3 style="color: #555;">Discovery Description:</h3>
+                            <p style="background: #f9f9f9; padding: 15px; border-radius: 8px; font-style: italic; color: #666; border-left: 4px solid #000;">${discoveryDesc}</p>
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: lostItem.user.email,
-            subject: `Discovery Report: Someone found your ${lostItem.itemName}!`,
-            html: `
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
-                    <h2 style="color: #333; text-align: center;">Good News!</h2>
-                    <p>Someone has reported finding an item that matches your <strong>${lostItem.itemName}</strong>.</p>
-                    
-                    <div style="background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #f0f0f0; margin: 20px 0;">
-                        <h3 style="margin-top: 0; color: #555;">Reporter Details:</h3>
-                        <ul style="list-style: none; padding: 0;">
-                            <li style="margin-bottom: 8px;"><strong>Name:</strong> ${reporter.name}</li>
-                            <li style="margin-bottom: 8px;"><strong>Discovery Date:</strong> ${new Date(discoveryDate).toLocaleDateString()}</li>
-                            <li style="margin-bottom: 8px;"><strong>Location:</strong> ${discoveryLocation}</li>
-                        </ul>
-                    </div>
-
-                    <h3 style="color: #555;">Discovery Description:</h3>
-                    <p style="background: #f9f9f9; padding: 15px; border-radius: 8px; font-style: italic; color: #666; border-left: 4px solid #000;">${discoveryDesc}</p>
-
-                    <div style="margin-top: 30px;">
-                        <h3 style="color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">Comparison Gallery</h3>
-                        
-                        <div style="margin-bottom: 25px;">
-                            <h4 style="color: #666; margin-bottom: 10px;">Your Original Photos:</h4>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                ${lostItem.images.map(img => `
-                                    <img src="${img}" style="width: 140px; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;"/>
-                                `).join('')}
+                            <div style="text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 10px;">
+                                <p style="margin: 0; font-size: 18px; font-weight: bold; color: #2e7d32;">AI Similarity Match: ${(similarityScore * 100).toFixed(2)}%</p>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 30px;">
+                                <p style="color: #888; font-size: 14px;">Please log in to the portal to view more details and coordinate the recovery.</p>
+                                <a href="http://localhost:5173" style="display: inline-block; background: #000; color: #fff; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px;">View Dashboard</a>
                             </div>
                         </div>
-
-                        <div style="margin-bottom: 25px;">
-                            <h4 style="color: #666; margin-bottom: 10px;">Reporter's Photos:</h4>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                ${discoveryPhotoUrls.map(img => `
-                                    <img src="${img}" style="width: 140px; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;"/>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e9; border-radius: 10px;">
-                        <p style="margin: 0; font-size: 18px; font-weight: bold; color: #2e7d32;">AI Similarity Match: ${(similarityScore * 100).toFixed(2)}%</p>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                        <p style="color: #888; font-size: 14px;">Please log in to the portal to view more details and coordinate the recovery.</p>
-                        <a href="http://localhost:5173" style="display: inline-block; background: #000; color: #fff; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 10px;">View Dashboard</a>
-                    </div>
-                </div>
-            `
-        };
-
-        // Wrap sendMail in a Promise to wait for it before responding
-        try {
-            await new Promise((resolve, reject) => {
-                transporter.sendMail(mailOptions, (error, info) => {
-                    if (error) {
-                        console.error('Email Error:', error);
-                        reject(error);
-                    } else {
-                        console.log('Email sent: ' + info.response);
-                        resolve(info);
-                    }
+                    `
                 });
-            });
-
-            res.json({
-                success: true,
-                message: 'Report submitted successfully and the owner has been notified via email.',
-                report: newReport
-            });
-        } catch (emailError) {
-            // If email fails, we still have the report saved in DB
-            res.json({
-                success: true,
-                message: 'Report submitted successfully, but the email notification failed. Please check your SMTP settings.',
-                report: newReport,
-                emailError: emailError.message
-            });
+            } catch (emailError) {
+                console.error('Resend Email Error:', emailError);
+            }
         }
+
+        res.json({
+            success: true,
+            message: 'Report submitted successfully. Owner notified via email.',
+            report: newReport
+        });
 
 
     } catch (err) {
@@ -382,57 +327,7 @@ exports.updateReportStatus = async (req, res) => {
             await LostItem.findByIdAndUpdate(report.lostItem._id, { status: 'accepted' });
         }
 
-        // Send Email Notification to Reporter
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-            const transporter = nodemailer.createTransport({
-                host: 'smtp.gmail.com',
-                port: 465,
-                secure: true,
-                auth: {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASS
-                }
-            });
-
-            const ownerName = report.lostItem.user.name;
-            const itemName = report.lostItem.itemName;
-
-            const mailOptions = {
-                from: process.env.EMAIL_USER,
-                to: report.reporter.email,
-                subject: `Update on your Claim: ${status === 'accepted' ? 'Accepted' : 'Dismissed'}`,
-                html: `
-                    <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: auto;">
-                        <h2 style="color: ${status === 'accepted' ? '#10b981' : '#ef4444'}; text-align: center;">
-                            Claim ${status === 'accepted' ? 'Accepted!' : 'Dismissed'}
-                        </h2>
-                        <p>Hi <strong>${report.reporter.name}</strong>,</p>
-                        <p>The owner of the <strong>${itemName}</strong> (${ownerName}) has ${status === 'accepted' ? 'accepted' : 'dismissed'} your claim.</p>
-                        
-                        ${status === 'accepted' ? `
-                            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #dcfce7; margin: 20px 0;">
-                                <p style="margin: 0; color: #166534; font-weight: bold;">Congratulations! Your claim has been verified.</p>
-                                <p style="margin-top: 10px; font-size: 14px; color: #166534;">The owner will reach out to you soon to coordinate the transfer. You can also view more details on your dashboard.</p>
-                            </div>
-                        ` : `
-                            <div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fee2e2; margin: 20px 0;">
-                                <p style="margin: 0; color: #991b1b; font-weight: bold;">The owner has dismissed this claim.</p>
-                                <p style="margin-top: 10px; font-size: 14px; color: #991b1b;">It seems the details or photos provided did not match the owner's records. Thank you for your effort in helping the community.</p>
-                            </div>
-                        `}
-
-                        <div style="text-align: center; margin-top: 30px;">
-                            <a href="http://localhost:5173" style="display: inline-block; background: #000; color: #fff; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold;">Go to Dashboard</a>
-                        </div>
-                    </div>
-                `
-            };
-
-            // Non-blocking email send
-            transporter.sendMail(mailOptions).catch(err => console.error('Reporter Email Error:', err));
-        }
-
-        res.json({ success: true, message: `Report ${status} successfully and reporter notified.`, report });
+        res.json({ success: true, message: `Report ${status} successfully.`, report });
     } catch (err) {
         console.error('Error updating report status:', err);
         res.json({ success: false, message: 'Server error while updating status' });
