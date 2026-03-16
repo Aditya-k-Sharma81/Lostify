@@ -4,6 +4,8 @@ const User = require('../models/User');
 const { Resend } = require('resend');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+console.log('Resend API Key loaded:', process.env.RESEND_API_KEY ? 'YES' : 'NO');
+
 
 const tf = require('@tensorflow/tfjs');
 const mobilenet = require('@tensorflow-models/mobilenet');
@@ -333,7 +335,9 @@ exports.updateReportStatus = async (req, res) => {
                 const ownerName = report.lostItem.user.name;
                 const itemName = report.lostItem.itemName;
 
-                await resend.emails.send({
+                console.log(`Attempting to send status update (${status}) to reporter:`, report.reporter.email);
+
+                const { data, error } = await resend.emails.send({
                     from: 'Lostify <onboarding@resend.dev>',
                     to: report.reporter.email,
                     subject: `Update on your Claim: ${status === 'accepted' ? 'Accepted' : 'Dismissed'}`,
@@ -363,9 +367,17 @@ exports.updateReportStatus = async (req, res) => {
                         </div>
                     `
                 });
+
+                if (error) {
+                    console.error('Resend Error (Reporter Notification):', error);
+                } else {
+                    console.log('Email sent to reporter successfully:', data);
+                }
             } catch (emailError) {
-                console.error('Reporter Email Error:', emailError);
+                console.error('Reporter Email Exception:', emailError);
             }
+        } else {
+            console.warn('RESEND_API_KEY missing, skipping reporter notification');
         }
 
         res.json({ success: true, message: `Report ${status} successfully. Reporter notified via email.`, report });
