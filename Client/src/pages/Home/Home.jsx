@@ -35,7 +35,7 @@ const Home = () => {
 
                         <div className="flex flex-wrap gap-5 pt-4">
                             <button
-                                onClick={() => navigate('/lost')}
+                                onClick={() => navigate('/report-lost')}
                                 className="group flex items-center gap-4 rounded-3xl bg-black px-10 py-6 text-[11px] font-black uppercase tracking-widest text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
                             >
                                 I've Lost Something
@@ -44,7 +44,7 @@ const Home = () => {
                                 </div>
                             </button>
                             <button
-                                onClick={() => navigate('/found')}
+                                onClick={() => navigate('/lost')}
                                 className="flex items-center gap-4 rounded-3xl bg-white px-10 py-6 text-[11px] font-black uppercase tracking-widest text-gray-900 shadow-xl border border-gray-100 transition-all duration-300 hover:bg-gray-50 hover:scale-105 active:scale-95"
                             >
                                 I've Found Something
